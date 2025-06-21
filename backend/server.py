@@ -394,7 +394,7 @@ async def download_instagram_task(download_id: str, url: str, quality: str):
         platform_dir = os.path.join(DOWNLOAD_BASE_DIR, "Instagram", safe_uploader)
         os.makedirs(platform_dir, exist_ok=True)
         
-        # Use Instaloader to download
+        # Use Instaloader to download with authentication
         L = instaloader.Instaloader(
             dirname_pattern=platform_dir,
             filename_pattern="{shortcode}_{date_utc}",
@@ -404,6 +404,15 @@ async def download_instagram_task(download_id: str, url: str, quality: str):
             download_comments=False,
             save_metadata=False
         )
+        
+        # Try to login if credentials are available
+        if INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD:
+            try:
+                L.login(INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
+                logging.info("Instagram login successful")
+            except Exception as login_error:
+                logging.warning(f"Instagram login failed: {str(login_error)}")
+                # Continue without login for public posts
         
         # Extract shortcode from URL
         if '/p/' in url:
@@ -426,11 +435,11 @@ async def download_instagram_task(download_id: str, url: str, quality: str):
         # Find downloaded files
         downloaded_files = []
         for file in os.listdir(platform_dir):
-            if shortcode in file:
+            if shortcode in file and not file.endswith('.json.xz'):  # Skip metadata files
                 downloaded_files.append(file)
         
         if downloaded_files:
-            # Take the first file (usually the main media)
+            # Take the first media file (usually the main content)
             filename = downloaded_files[0]
             filepath = os.path.join(platform_dir, filename)
             file_size = os.path.getsize(filepath)
@@ -453,16 +462,20 @@ async def download_instagram_task(download_id: str, url: str, quality: str):
             raise Exception("Downloaded file not found")
             
     except Exception as e:
+        error_msg = str(e)
+        if "401" in error_msg or "login" in error_msg.lower():
+            error_msg = f"Instagram authentication required. Please configure INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD environment variables. {error_msg}"
+        
         await db.downloads.update_one(
             {"id": download_id},
             {
                 "$set": {
                     "status": "failed",
-                    "error_message": str(e)
+                    "error_message": error_msg
                 }
             }
         )
-        logging.error(f"Instagram download failed for {download_id}: {str(e)}")
+        logging.error(f"Instagram download failed for {download_id}: {error_msg}")
 
 async def download_reddit_task(download_id: str, url: str, quality: str):
     """Download Reddit media using gallery-dl"""
@@ -487,16 +500,50 @@ async def download_reddit_task(download_id: str, url: str, quality: str):
             {"$set": {"progress": 30.0}}
         )
         
+        # Create gallery-dl config for Reddit authentication if available
+        config_data = {}
+        if REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET:
+            config_data = {
+                "extractor": {
+                    "reddit": {
+                        "client-id": REDDIT_CLIENT_ID,
+                        "client-secret": REDDIT_CLIENT_SECRET
+                    }
+                }
+            }
+            
+            if REDDIT_USERNAME and REDDIT_PASSWORD:
+                config_data["extractor"]["reddit"].update({
+                    "username": REDDIT_USERNAME,
+                    "password": REDDIT_PASSWORD
+                })
+        
         # Use gallery-dl to download Reddit content
         cmd = [
             "gallery-dl",
             "--dest", platform_dir,
-            "--filename", "{category}_{subcategory}_{id}_{num}.{extension}",
-            url
+            "--filename", "{category}_{subcategory}_{id}_{num}.{extension}"
         ]
         
-        # Run gallery-dl command
-        process = subprocess.run(cmd, capture_output=True, text=True)
+        # Add config if we have authentication
+        if config_data:
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as config_file:
+                json.dump(config_data, config_file)
+                cmd.extend(["--config", config_file.name])
+                
+                # Add URL and run command
+                cmd.append(url)
+                
+                # Run gallery-dl command
+                process = subprocess.run(cmd, capture_output=True, text=True)
+                
+                # Clean up temp config file
+                os.unlink(config_file.name)
+        else:
+            # Run without authentication config
+            cmd.append(url)
+            process = subprocess.run(cmd, capture_output=True, text=True)
         
         # Progress update
         await db.downloads.update_one(
@@ -535,19 +582,23 @@ async def download_reddit_task(download_id: str, url: str, quality: str):
             else:
                 raise Exception("No media files found to download")
         else:
-            raise Exception(f"gallery-dl failed: {process.stderr}")
+            error_msg = process.stderr
+            if "403" in error_msg or "rate limit" in error_msg.lower():
+                error_msg = f"Reddit access limited. For better access, configure REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET environment variables. {error_msg}"
+            raise Exception(f"gallery-dl failed: {error_msg}")
             
     except Exception as e:
+        error_msg = str(e)
         await db.downloads.update_one(
             {"id": download_id},
             {
                 "$set": {
                     "status": "failed",
-                    "error_message": str(e)
+                    "error_message": error_msg
                 }
             }
         )
-        logging.error(f"Reddit download failed for {download_id}: {str(e)}")
+        logging.error(f"Reddit download failed for {download_id}: {error_msg}")
 
 async def download_media_task(download_id: str, url: str, quality: str, audio_only: bool, output_format: str, platform: str):
     """Universal download function that routes to appropriate downloader"""
