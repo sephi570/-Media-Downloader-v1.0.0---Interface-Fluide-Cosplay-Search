@@ -5,22 +5,22 @@
   },
   "video_info": {
     "status": "Failed",
-    "details": "Video info request failed: 400 Client Error: Bad Request for url: https://74b92f3c-e1ab-47f0-83c5-583cb40fd49a.preview.emergentagent.com/api/video/info"
+    "details": "Video info missing essential data: {'title': 'Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)', 'duration': 213, 'uploader': 'Rick Astley', 'view_count': 1666885790, 'upload_date': '20091025', 'thumbnail': 'https://i.ytimg.com/vi_webp/dQw4w9WgXcQ/maxresdefault.webp', 'formats': []}"
   },
   "video_download": {
     "status": "Passed",
-    "details": "Download started successfully with ID: 6f23bf9b-bee6-4b2d-9950-f63367a2be6d"
+    "details": "Download started successfully with ID: 48fe0d2d-5bf1-4528-88dd-75905872d3e3"
   },
   "download_status": {
     "status": "Failed",
-    "details": "Download status unexpected: {'id': '6f23bf9b-bee6-4b2d-9950-f63367a2be6d', 'url': 'https://youtu.be/jNQXAC9IVRw', 'status': 'failed', 'progress': 0.0, 'filename': None, 'file_size': None, 'error_message': 'ERROR: [youtube] jNQXAC9IVRw: Sign in to confirm you\u2019re not a bot. This helps protect our community. Learn more', 'created_at': '2025-06-21T12:17:45.045000', 'completed_at': None, 'title': None, 'uploader': None}"
+    "details": "Download status unexpected: {'id': '48fe0d2d-5bf1-4528-88dd-75905872d3e3', 'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'status': 'failed', 'progress': 0.0, 'filename': None, 'file_size': None, 'error_message': '', 'created_at': '2025-06-21T12:19:14.180000', 'completed_at': None, 'title': None, 'uploader': None}"
   },
   "downloads_list": {
     "status": "Passed",
-    "details": "Downloads list returned 1 items"
+    "details": "Downloads list returned 2 items"
   },
   "stats": {
     "status": "Passed",
-    "details": "Stats endpoint returned all required fields: {'total_downloads': 1, 'completed_downloads': 0, 'failed_downloads': 1, 'currently_downloading': 0, 'success_rate': 0.0}"
+    "details": "Stats endpoint returned all required fields: {'total_downloads': 2, 'completed_downloads': 0, 'failed_downloads': 2, 'currently_downloading': 0, 'success_rate': 0.0}"
   }
 }
