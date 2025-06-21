@@ -1002,6 +1002,14 @@ async def get_supported_platforms():
             {"name": "YouTube", "key": "youtube", "formats": ["mp4", "avi", "mkv", "webm", "mp3"]},
             {"name": "Instagram", "key": "instagram", "formats": ["jpg", "mp4"]},
             {"name": "Reddit", "key": "reddit", "formats": ["jpg", "png", "gif", "mp4", "webm"]},
+            {"name": "PornHub", "key": "pornhub", "formats": ["mp4", "avi", "mkv", "webm"]},
+            {"name": "RedTube", "key": "redtube", "formats": ["mp4", "avi", "mkv", "webm"]},
+            {"name": "NHentai", "key": "nhentai", "formats": ["jpg", "png", "zip"]},
+            {"name": "Luscious", "key": "luscious", "formats": ["jpg", "png", "gif"]},
+            {"name": "Nutaku", "key": "nutaku", "formats": ["jpg", "png", "gif"]},
+            {"name": "CosplayTele", "key": "cosplaytele", "formats": ["jpg", "png", "gif"]},
+            {"name": "ImHentai", "key": "imhentai", "formats": ["jpg", "png", "zip"]},
+            {"name": "Spotify", "key": "spotify", "formats": ["preview only"], "note": "DRM protected"},
             {"name": "Other (via yt-dlp)", "key": "other", "formats": ["mp4", "avi", "mkv", "webm", "mp3"]}
         ]
     }
