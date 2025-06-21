@@ -57,6 +57,24 @@ class DownloadRequest(BaseModel):
     output_format: str = "mp4"
     platform: str = "auto"  # auto, youtube, instagram, reddit
 
+class CosplaySearchRequest(BaseModel):
+    query: str
+    platforms: List[str] = ["all"]  # platforms to search on
+    limit: int = 10
+
+class CosplayResult(BaseModel):
+    id: str
+    name: str
+    platform: str
+    url: str
+    thumbnail: Optional[str] = None
+    gallery_count: Optional[int] = None
+    description: Optional[str] = None
+
+class CosplayDownloadRequest(BaseModel):
+    cosplay_results: List[str]  # List of selected result IDs
+    quality: str = "best"
+
 class AuthConfig(BaseModel):
     platform: str
     username: Optional[str] = None
