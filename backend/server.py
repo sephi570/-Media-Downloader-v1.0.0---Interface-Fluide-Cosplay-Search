@@ -251,7 +251,7 @@ def get_reddit_info(url: str) -> dict:
         if "403" in str(e) or "429" in str(e):
             raise HTTPException(
                 status_code=400, 
-                detail=f"Reddit access limited. For better access, configure REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET environment variables. Error: {str(e)}"
+                detail=f"Reddit access limited. Please configure your Reddit API credentials in the Settings panel. Error: {str(e)}"
             )
         raise HTTPException(status_code=400, detail=f"Failed to extract Reddit info: {str(e)}")
 
