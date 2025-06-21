@@ -257,7 +257,7 @@ class DownloadProgress:
             logging.error(f"Failed to update progress for {self.download_id}: {str(e)}")
 
 async def download_video_task(download_id: str, url: str, quality: str, audio_only: bool, output_format: str):
-    """Background task for downloading videos"""
+    """Download video using yt-dlp"""
     try:
         # Update status to downloading
         await db.downloads.update_one(
