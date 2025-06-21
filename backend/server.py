@@ -47,6 +47,18 @@ class DownloadRequest(BaseModel):
     quality: str = "best"
     audio_only: bool = False
     output_format: str = "mp4"
+    platform: str = "auto"  # auto, youtube, instagram, reddit
+
+class MediaInfo(BaseModel):
+    title: str
+    platform: str
+    uploader: Optional[str] = None
+    duration: Optional[int] = None
+    view_count: Optional[int] = None
+    upload_date: Optional[str] = None
+    thumbnail: Optional[str] = None
+    media_type: str = "video"  # video, image, gallery
+    media_count: int = 1
 
 class DownloadStatus(BaseModel):
     id: str
