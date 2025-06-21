@@ -23,6 +23,14 @@ import json
 import os
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 
+# Platform authentication settings
+INSTAGRAM_USERNAME = os.environ.get('INSTAGRAM_USERNAME', '')
+INSTAGRAM_PASSWORD = os.environ.get('INSTAGRAM_PASSWORD', '')
+REDDIT_CLIENT_ID = os.environ.get('REDDIT_CLIENT_ID', '')
+REDDIT_CLIENT_SECRET = os.environ.get('REDDIT_CLIENT_SECRET', '')
+REDDIT_USERNAME = os.environ.get('REDDIT_USERNAME', '')
+REDDIT_PASSWORD = os.environ.get('REDDIT_PASSWORD', '')
+
 app = FastAPI()
 
 # CORS middleware
