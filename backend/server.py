@@ -160,6 +160,16 @@ def detect_platform(url: str) -> str:
         return 'nhentai'
     elif 'luscious.net' in url_lower:
         return 'luscious'
+    elif 'nutaku.net' in url_lower:
+        return 'nutaku'
+    elif 'cosplaytele' in url_lower:
+        return 'cosplaytele'
+    elif 'imhentai.xxx' in url_lower:
+        return 'imhentai'
+    elif 'spotify.com' in url_lower:
+        return 'spotify'
+    elif 'open.spotify.com' in url_lower:
+        return 'spotify'
     else:
         return 'unknown'
 
