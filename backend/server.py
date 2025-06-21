@@ -64,6 +64,9 @@ class AuthConfig(BaseModel):
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
     additional_data: Optional[dict] = None
+    additional_data: Optional[dict] = None
+
+class MediaInfo(BaseModel):
     title: str
     platform: str
     uploader: Optional[str] = None
@@ -73,6 +76,9 @@ class AuthConfig(BaseModel):
     thumbnail: Optional[str] = None
     media_type: str = "video"  # video, image, gallery
     media_count: int = 1
+
+# Global auth storage (in production, use secure database)
+auth_storage = {}
 
 class DownloadStatus(BaseModel):
     id: str
