@@ -8,13 +8,24 @@ const App = () => {
   const [downloads, setDownloads] = useState([]);
   const [stats, setStats] = useState(null);
   const [platforms, setPlatforms] = useState([]);
+  const [authStatus, setAuthStatus] = useState({});
   const [loading, setLoading] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
   const [downloadOptions, setDownloadOptions] = useState({
     quality: 'best',
     audio_only: false,
     output_format: 'mp4',
     platform: 'auto'
+  });
+
+  // Auth configuration states
+  const [authConfig, setAuthConfig] = useState({
+    platform: '',
+    username: '',
+    password: '',
+    client_id: '',
+    client_secret: ''
   });
 
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -28,6 +39,55 @@ const App = () => {
     if (urlLower.includes('pornhub.com')) return 'pornhub';
     if (urlLower.includes('redtube.com')) return 'redtube';
     return 'unknown';
+  };
+
+  // Fetch auth status
+  const fetchAuthStatus = async () => {
+    try {
+      const response = await axios.get(`${BACKEND_URL}/api/auth/status`);
+      setAuthStatus(response.data);
+    } catch (error) {
+      console.error('Échec de récupération du statut d\'authentification:', error);
+    }
+  };
+
+  // Configure authentication
+  const configureAuth = async (platform) => {
+    if (!authConfig.platform) return;
+    
+    setLoading(true);
+    try {
+      const response = await axios.post(`${BACKEND_URL}/api/auth/configure`, authConfig);
+      alert(`Configuration ${platform} : ${response.data.message}`);
+      
+      // Reset form
+      setAuthConfig({
+        platform: '',
+        username: '',
+        password: '',
+        client_id: '',
+        client_secret: ''
+      });
+      
+      // Refresh auth status
+      fetchAuthStatus();
+    } catch (error) {
+      alert('Échec de configuration: ' + (error.response?.data?.detail || error.message));
+    }
+    setLoading(false);
+  };
+
+  // Delete authentication
+  const deleteAuth = async (platform) => {
+    if (!window.confirm(`Supprimer l'authentification pour ${platform} ?`)) return;
+    
+    try {
+      await axios.delete(`${BACKEND_URL}/api/auth/${platform}`);
+      alert(`Authentification ${platform} supprimée`);
+      fetchAuthStatus();
+    } catch (error) {
+      alert('Échec de suppression: ' + (error.response?.data?.detail || error.message));
+    }
   };
 
   // Fetch media information
@@ -139,6 +199,7 @@ const App = () => {
     fetchDownloads();
     fetchStats();
     fetchPlatforms();
+    fetchAuthStatus();
     const interval = setInterval(() => {
       fetchDownloads();
       fetchStats();
@@ -207,6 +268,13 @@ const App = () => {
     }
   };
 
+  const getAuthStatusIcon = (platform) => {
+    const status = authStatus[platform];
+    if (!status) return '❓';
+    if (status.configured) return '✅';
+    return '❌';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-red-50">
       {/* Header */}
@@ -222,28 +290,178 @@ const App = () => {
               </p>
             </div>
             
-            {/* Stats */}
-            {stats && (
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-2 rounded-lg">
-                  <div className="text-2xl font-bold">{stats.total_downloads}</div>
-                  <div className="text-xs opacity-90">Total</div>
+            <div className="flex items-center space-x-4">
+              {/* Settings Button */}
+              <button 
+                onClick={() => setShowSettings(!showSettings)}
+                className="px-4 py-2 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105"
+              >
+                ⚙️ Paramètres
+              </button>
+              
+              {/* Stats */}
+              {stats && (
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-2 rounded-lg">
+                    <div className="text-2xl font-bold">{stats.total_downloads}</div>
+                    <div className="text-xs opacity-90">Total</div>
+                  </div>
+                  <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-4 py-2 rounded-lg">
+                    <div className="text-2xl font-bold">{stats.completed_downloads}</div>
+                    <div className="text-xs opacity-90">Terminés</div>
+                  </div>
+                  <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg">
+                    <div className="text-2xl font-bold">{stats.currently_downloading}</div>
+                    <div className="text-xs opacity-90">En cours</div>
+                  </div>
                 </div>
-                <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white px-4 py-2 rounded-lg">
-                  <div className="text-2xl font-bold">{stats.completed_downloads}</div>
-                  <div className="text-xs opacity-90">Terminés</div>
-                </div>
-                <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg">
-                  <div className="text-2xl font-bold">{stats.currently_downloading}</div>
-                  <div className="text-xs opacity-90">En cours</div>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Settings Panel */}
+        {showSettings && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-6 text-gray-800">⚙️ Configuration des Identifiants</h2>
+            
+            {/* Current Auth Status */}
+            <div className="mb-6">
+              <h3 className="text-lg font-medium mb-4">État actuel :</h3>
+              <div className="grid md:grid-cols-3 gap-4">
+                {Object.entries(authStatus).map(([platform, status]) => (
+                  <div key={platform} className="bg-gray-50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">{getPlatformIcon(platform)} {getPlatformName(platform)}</span>
+                      <span className="text-2xl">{getAuthStatusIcon(platform)}</span>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {status.configured ? 'Configuré' : 'Non configuré'}
+                      {status.username && <div>Utilisateur: {status.username}</div>}
+                      {status.client_id && <div>Client ID: {status.client_id.substring(0, 8)}...</div>}
+                    </div>
+                    {status.configured && (
+                      <button
+                        onClick={() => deleteAuth(platform)}
+                        className="mt-2 px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded"
+                      >
+                        Supprimer
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Auth Configuration Form */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium mb-4">Configurer une nouvelle authentification :</h3>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Plateforme :</label>
+                  <select
+                    value={authConfig.platform}
+                    onChange={(e) => setAuthConfig({...authConfig, platform: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">Sélectionner une plateforme</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="reddit">Reddit</option>
+                  </select>
+                </div>
+
+                {authConfig.platform === 'instagram' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Nom d'utilisateur Instagram :</label>
+                      <input
+                        type="text"
+                        value={authConfig.username}
+                        onChange={(e) => setAuthConfig({...authConfig, username: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        placeholder="votre_nom_utilisateur"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Mot de passe Instagram :</label>
+                      <input
+                        type="password"
+                        value={authConfig.password}
+                        onChange={(e) => setAuthConfig({...authConfig, password: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        placeholder="votre_mot_de_passe"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {authConfig.platform === 'reddit' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Reddit Client ID :</label>
+                      <input
+                        type="text"
+                        value={authConfig.client_id}
+                        onChange={(e) => setAuthConfig({...authConfig, client_id: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        placeholder="Votre client ID Reddit"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Créez une app sur <a href="https://www.reddit.com/prefs/apps" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">reddit.com/prefs/apps</a>
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Reddit Client Secret :</label>
+                      <input
+                        type="password"
+                        value={authConfig.client_secret}
+                        onChange={(e) => setAuthConfig({...authConfig, client_secret: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        placeholder="Votre client secret Reddit"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Reddit Username (optionnel) :</label>
+                      <input
+                        type="text"
+                        value={authConfig.username}
+                        onChange={(e) => setAuthConfig({...authConfig, username: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        placeholder="votre_nom_utilisateur_reddit"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Reddit Password (optionnel) :</label>
+                      <input
+                        type="password"
+                        value={authConfig.password}
+                        onChange={(e) => setAuthConfig({...authConfig, password: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        placeholder="votre_mot_de_passe_reddit"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {authConfig.platform && (
+                <div className="mt-6">
+                  <button
+                    onClick={() => configureAuth(authConfig.platform)}
+                    disabled={loading || !authConfig.platform}
+                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105"
+                  >
+                    {loading ? '⏳ Configuration...' : '💾 Enregistrer la Configuration'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* URL Input Section */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -254,6 +472,7 @@ const App = () => {
               <div className="flex items-center space-x-2 px-3 py-1 bg-gray-100 rounded-full">
                 <span className="text-lg">{getPlatformIcon(selectedPlatform)}</span>
                 <span className="text-sm font-medium text-gray-700">{getPlatformName(selectedPlatform)}</span>
+                <span className="text-lg">{getAuthStatusIcon(selectedPlatform)}</span>
               </div>
             )}
           </div>
@@ -287,7 +506,7 @@ const App = () => {
             <div className="flex flex-wrap gap-2">
               {platforms.map((platform) => (
                 <span key={platform.key} className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
-                  {getPlatformIcon(platform.key)} {platform.name}
+                  {getPlatformIcon(platform.key)} {platform.name} {getAuthStatusIcon(platform.key)}
                 </span>
               ))}
             </div>
