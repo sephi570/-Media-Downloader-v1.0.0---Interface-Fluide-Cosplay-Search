@@ -167,15 +167,18 @@ backend:
 
   - task: "Database Integration"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Intégration MongoDB avec Motor pour suivi async des téléchargements"
+      - working: true
+        agent: "testing"
+        comment: "L'intégration avec MongoDB fonctionne correctement. Les téléchargements sont enregistrés dans la base de données et peuvent être récupérés via les endpoints API. Les tests ont confirmé que les opérations de lecture et d'écriture dans la base de données fonctionnent comme prévu."
 
 frontend:
   - task: "YouTube URL Input Interface"
