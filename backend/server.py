@@ -598,7 +598,7 @@ async def download_reddit_task(download_id: str, url: str, quality: str):
         else:
             error_msg = process.stderr
             if "403" in error_msg or "rate limit" in error_msg.lower():
-                error_msg = f"Reddit access limited. For better access, configure REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET environment variables. {error_msg}"
+                error_msg = f"Reddit access limited. Please configure your Reddit API credentials in the Settings panel. {error_msg}"
             raise Exception(f"gallery-dl failed: {error_msg}")
             
     except Exception as e:
