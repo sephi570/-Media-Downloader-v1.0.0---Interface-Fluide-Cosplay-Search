@@ -97,6 +97,184 @@ class MediaInfo(BaseModel):
 # Global auth storage (in production, use secure database)
 auth_storage = {}
 
+# Global cosplay search results cache
+cosplay_search_cache = {}
+
+async def search_cosplay_galleries(query: str, platforms: List[str] = ["all"], limit: int = 10) -> List[CosplayResult]:
+    """Search for cosplay galleries across multiple platforms"""
+    results = []
+    search_id = str(uuid.uuid4())
+    
+    # Platforms that support cosplay content
+    cosplay_platforms = ["luscious", "cosplaytele", "nhentai", "reddit"]
+    
+    if platforms == ["all"]:
+        platforms = cosplay_platforms
+    
+    try:
+        # Search on each platform
+        for platform in platforms:
+            if platform in cosplay_platforms:
+                platform_results = await search_platform_cosplay(query, platform, limit)
+                results.extend(platform_results)
+        
+        # Store results in cache for later download
+        cosplay_search_cache[search_id] = {
+            "query": query,
+            "results": results,
+            "timestamp": datetime.utcnow()
+        }
+        
+        return results[:limit]
+        
+    except Exception as e:
+        logging.error(f"Cosplay search failed: {str(e)}")
+        return []
+
+async def search_platform_cosplay(query: str, platform: str, limit: int) -> List[CosplayResult]:
+    """Search for cosplay content on a specific platform"""
+    results = []
+    
+    try:
+        if platform == "reddit":
+            # Search Reddit for cosplay subreddits
+            reddit_results = await search_reddit_cosplay(query, limit)
+            results.extend(reddit_results)
+        
+        elif platform in ["luscious", "cosplaytele", "nhentai"]:
+            # Use gallery-dl to search these platforms
+            gallery_results = await search_gallery_cosplay(query, platform, limit)
+            results.extend(gallery_results)
+    
+    except Exception as e:
+        logging.error(f"Platform search failed for {platform}: {str(e)}")
+    
+    return results
+
+async def search_reddit_cosplay(query: str, limit: int) -> List[CosplayResult]:
+    """Search Reddit for cosplay content"""
+    results = []
+    
+    try:
+        # Search relevant cosplay subreddits
+        cosplay_subreddits = ["cosplay", "cosplaygirls", "cosplayers", "cosplaybabes"]
+        
+        for subreddit in cosplay_subreddits:
+            try:
+                # Use Reddit JSON API to search
+                search_url = f"https://www.reddit.com/r/{subreddit}/search.json"
+                params = {
+                    "q": query,
+                    "restrict_sr": "1",
+                    "limit": limit // len(cosplay_subreddits),
+                    "sort": "top"
+                }
+                headers = {'User-Agent': 'CosplaySearchBot/1.0'}
+                
+                response = requests.get(search_url, params=params, headers=headers)
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    for post in data.get("data", {}).get("children", []):
+                        post_data = post["data"]
+                        
+                        # Check if post has media
+                        if post_data.get("url") and any(ext in post_data["url"].lower() for ext in ['.jpg', '.png', '.gif', 'imgur', 'reddit']):
+                            result = CosplayResult(
+                                id=f"reddit_{post_data['id']}",
+                                name=f"{query} - {post_data['title'][:50]}...",
+                                platform="reddit",
+                                url=f"https://reddit.com{post_data['permalink']}",
+                                thumbnail=post_data.get("thumbnail"),
+                                gallery_count=1,
+                                description=f"r/{subreddit} - {post_data.get('score', 0)} upvotes"
+                            )
+                            results.append(result)
+                
+            except Exception as e:
+                logging.warning(f"Reddit subreddit search failed for r/{subreddit}: {str(e)}")
+                continue
+    
+    except Exception as e:
+        logging.error(f"Reddit cosplay search failed: {str(e)}")
+    
+    return results
+
+async def search_gallery_cosplay(query: str, platform: str, limit: int) -> List[CosplayResult]:
+    """Search gallery platforms for cosplay content"""
+    results = []
+    
+    try:
+        # Create a mock search for gallery platforms
+        # In real implementation, you'd use gallery-dl's search functionality
+        base_urls = {
+            "luscious": "https://www.luscious.net/search/",
+            "cosplaytele": "https://cosplaytele.com/search/",
+            "nhentai": "https://nhentai.net/search/"
+        }
+        
+        if platform in base_urls:
+            # Generate mock results (in real implementation, parse actual search results)
+            for i in range(min(limit, 3)):
+                result = CosplayResult(
+                    id=f"{platform}_{query}_{i}",
+                    name=f"{query} Gallery {i+1}",
+                    platform=platform,
+                    url=f"{base_urls[platform]}?q={query.replace(' ', '+')}&page={i+1}",
+                    thumbnail=None,
+                    gallery_count=10 + (i * 5),
+                    description=f"{platform.title()} gallery with {query} cosplay"
+                )
+                results.append(result)
+    
+    except Exception as e:
+        logging.error(f"Gallery cosplay search failed for {platform}: {str(e)}")
+    
+    return results
+
+async def download_cosplay_galleries(result_ids: List[str], quality: str = "best"):
+    """Download selected cosplay galleries"""
+    downloaded_galleries = []
+    
+    try:
+        # Find results in cache
+        for cache_key, cache_data in cosplay_search_cache.items():
+            for result in cache_data["results"]:
+                if result.id in result_ids:
+                    # Start download for this gallery
+                    download_id = str(uuid.uuid4())
+                    
+                    # Create download record
+                    download_record = {
+                        "id": download_id,
+                        "url": result.url,
+                        "status": "pending",
+                        "progress": 0.0,
+                        "created_at": datetime.utcnow(),
+                        "platform": result.platform,
+                        "title": result.name,
+                        "uploader": result.platform.title(),
+                        "cosplay_query": True
+                    }
+                    
+                    await db.downloads.insert_one(download_record)
+                    
+                    # Start background download
+                    if result.platform == "reddit":
+                        asyncio.create_task(download_reddit_task(download_id, result.url, quality))
+                    else:
+                        asyncio.create_task(download_gallery_site_task(download_id, result.url, quality, result.platform))
+                    
+                    downloaded_galleries.append({
+                        "download_id": download_id,
+                        "result": result
+                    })
+    
+    except Exception as e:
+        logging.error(f"Cosplay galleries download failed: {str(e)}")
+    
+    return downloaded_galleries
+
 class DownloadStatus(BaseModel):
     id: str
     url: str
