@@ -154,6 +154,13 @@ async def download_video_task(download_id: str, url: str, quality: str, audio_on
             'outtmpl': os.path.join(uploader_dir, f'{safe_title}.%(ext)s'),
             'progress_hooks': [progress_tracker.progress_hook],
             'noplaylist': True,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['web'],
+                    'player_skip': ['configs', 'webpage']
+                }
+            }
         }
         
         if audio_only:
