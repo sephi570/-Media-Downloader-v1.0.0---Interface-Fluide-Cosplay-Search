@@ -1,7 +1,7 @@
-name: 🚀 Build Windows EXE
+name: 🚀 Build Windows EXE (Fixed)
 
 on:
-  workflow_dispatch:  # Permet de lancer manuellement
+  workflow_dispatch:
   push:
     branches: [ main, master ]
 
@@ -10,47 +10,92 @@ jobs:
     runs-on: windows-latest
     
     steps:
-    - name: 📥 Télécharger le code
+    - name: 📥 Checkout code
       uses: actions/checkout@v4
       
-    - name: 🟢 Installer Node.js
+    - name: 🟢 Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: \'18\'
+        cache: \'npm\'
+        cache-dependency-path: frontend/package-lock.json
         
-    - name: 🐍 Installer Python
+    - name: 🐍 Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: \'3.9\'
         
-    - name: 📦 Installer les dépendances Frontend
+    - name: 📁 List directory structure (debug)
       run: |
-        cd frontend
-        npm install
+        echo "Root directory:"
+        dir
+        echo "Frontend directory:"
+        dir frontend
+        if (Test-Path "frontend/package.json") {
+          echo "✅ package.json found"
+        } else {
+          echo "❌ package.json NOT found"
+        }
         
-    - name: 📦 Installer les dépendances Backend  
+    - name: 📦 Install frontend dependencies
+      working-directory: frontend
       run: |
-        cd backend
+        echo "Installing npm dependencies..."
+        npm ci --legacy-peer-deps
+        
+    - name: 📦 Install backend dependencies (optional)
+      working-directory: backend
+      run: |
+        echo "Installing Python dependencies..."
         pip install -r requirements.txt
+      continue-on-error: true
         
-    - name: ⚛️ Build React
+    - name: ⚛️ Build React app
+      working-directory: frontend
       run: |
-        cd frontend
+        echo "Building React application..."
         npm run build
         
-    - name: 🔨 Créer l'EXE
+    - name: 📁 Verify build output
+      working-directory: frontend
       run: |
-        cd frontend
+        if (Test-Path "build") {
+          echo "✅ Build directory created"
+          dir build
+        } else {
+          echo "❌ Build directory NOT found"
+          exit 1
+        }
+        
+    - name: 🔨 Build Electron app
+      working-directory: frontend
+      run: |
+        echo "Building Electron application..."
         npm run dist
         
-    - name: 📤 Sauvegarder l'EXE
-      uses: actions/upload-artifact@v4
-      with:
-        name: Media-Downloader-Windows-EXE
-        path: frontend/dist/*.exe
+    - name: 📁 List build artifacts
+      working-directory: frontend
+      run: |
+        echo "Build output:"
+        if (Test-Path "dist") {
+          dir dist
+        } else {
+          echo "❌ Dist directory NOT found"
+        }
         
-    - name: 📤 Sauvegarder l'Installer
+    - name: 📤 Upload Windows EXE
       uses: actions/upload-artifact@v4
       with:
-        name: Media-Downloader-Setup
-        path: frontend/dist/*Setup*.exe"
+        name: Media-Downloader-Windows
+        path: |
+          frontend/dist/*.exe
+          frontend/dist/*.msi
+          frontend/dist/*.zip
+        if-no-files-found: warn
+        
+    - name: 📤 Upload All Artifacts (debug)
+      uses: actions/upload-artifact@v4
+      with:
+        name: All-Build-Output
+        path: frontend/dist/
+        if-no-files-found: warn
