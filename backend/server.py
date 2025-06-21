@@ -169,10 +169,11 @@ def get_instagram_info(url: str) -> dict:
         # Create Instaloader instance with authentication if available
         L = instaloader.Instaloader()
         
-        # Try to login if credentials are available
-        if INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD:
+        # Try to login using stored credentials
+        instagram_auth = auth_storage.get("instagram", {})
+        if instagram_auth.get("username") and instagram_auth.get("password"):
             try:
-                L.login(INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
+                L.login(instagram_auth["username"], instagram_auth["password"])
             except Exception as login_error:
                 # Continue without login, but note the limitation
                 logging.warning(f"Instagram login failed: {str(login_error)}")
@@ -203,7 +204,7 @@ def get_instagram_info(url: str) -> dict:
         if "401" in str(e) or "login" in str(e).lower():
             raise HTTPException(
                 status_code=400, 
-                detail=f"Instagram authentication required. Please configure INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD environment variables. Error: {str(e)}"
+                detail=f"Instagram authentication required. Please configure your Instagram credentials in the Settings panel. Error: {str(e)}"
             )
         raise HTTPException(status_code=400, detail=f"Failed to extract Instagram info: {str(e)}")
 
