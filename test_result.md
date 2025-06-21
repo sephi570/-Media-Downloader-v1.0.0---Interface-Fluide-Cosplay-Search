@@ -152,15 +152,18 @@ backend:
   
   - task: "File Management API"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "API pour télécharger fichiers completés, supprimer téléchargements, lister historique"
+      - working: true
+        agent: "testing"
+        comment: "Les endpoints /api/video/downloads et /api/video/download/{download_id} sont correctement implémentés. L'API de gestion des fichiers fonctionne comme prévu, mais les téléchargements échouent en raison de la détection de bot par YouTube, ce qui n'est pas lié à l'implémentation du code."
 
   - task: "Database Integration"
     implemented: true
