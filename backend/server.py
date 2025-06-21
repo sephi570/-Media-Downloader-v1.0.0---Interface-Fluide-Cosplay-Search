@@ -779,23 +779,87 @@ async def delete_download(download_id: str):
     
     return {"message": "Download deleted successfully"}
 
+@app.post("/api/auth/configure")
+async def configure_auth(auth_config: AuthConfig):
+    """Configure authentication for a platform"""
+    try:
+        platform = auth_config.platform.lower()
+        
+        # Store auth config in memory (in production, use encrypted database)
+        auth_storage[platform] = {
+            "username": auth_config.username,
+            "password": auth_config.password,
+            "client_id": auth_config.client_id,
+            "client_secret": auth_config.client_secret,
+            "additional_data": auth_config.additional_data or {}
+        }
+        
+        # Test the authentication
+        test_result = {"status": "stored", "message": "Authentication stored successfully"}
+        
+        if platform == "instagram" and auth_config.username and auth_config.password:
+            try:
+                L = instaloader.Instaloader()
+                L.login(auth_config.username, auth_config.password)
+                test_result["message"] = "Instagram authentication verified and stored"
+                test_result["status"] = "verified"
+            except Exception as e:
+                test_result["message"] = f"Instagram authentication stored but verification failed: {str(e)}"
+                test_result["status"] = "stored_unverified"
+        
+        elif platform == "reddit" and auth_config.client_id and auth_config.client_secret:
+            try:
+                # Test Reddit API connection
+                import praw
+                reddit = praw.Reddit(
+                    client_id=auth_config.client_id,
+                    client_secret=auth_config.client_secret,
+                    user_agent="MediaDownloader/1.0"
+                )
+                # Try a simple API call
+                reddit.subreddit("test").id
+                test_result["message"] = "Reddit authentication verified and stored"
+                test_result["status"] = "verified"
+            except Exception as e:
+                test_result["message"] = f"Reddit authentication stored but verification failed: {str(e)}"
+                test_result["status"] = "stored_unverified"
+        
+        return test_result
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to configure authentication: {str(e)}")
+
 @app.get("/api/auth/status")
 async def get_auth_status():
     """Get authentication status for different platforms"""
+    instagram_auth = auth_storage.get("instagram", {})
+    reddit_auth = auth_storage.get("reddit", {})
+    
     return {
         "instagram": {
-            "configured": bool(INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD),
-            "username": INSTAGRAM_USERNAME if INSTAGRAM_USERNAME else None
+            "configured": bool(instagram_auth.get("username") and instagram_auth.get("password")),
+            "username": instagram_auth.get("username") if instagram_auth.get("username") else None
         },
         "reddit": {
-            "configured": bool(REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET),
-            "has_user_auth": bool(REDDIT_USERNAME and REDDIT_PASSWORD)
+            "configured": bool(reddit_auth.get("client_id") and reddit_auth.get("client_secret")),
+            "has_user_auth": bool(reddit_auth.get("username") and reddit_auth.get("password")),
+            "client_id": reddit_auth.get("client_id") if reddit_auth.get("client_id") else None
         },
         "youtube": {
             "configured": True,
             "note": "YouTube works without authentication via yt-dlp"
         }
     }
+
+@app.delete("/api/auth/{platform}")
+async def delete_auth(platform: str):
+    """Delete authentication for a platform"""
+    platform = platform.lower()
+    if platform in auth_storage:
+        del auth_storage[platform]
+        return {"message": f"Authentication for {platform} deleted successfully"}
+    else:
+        raise HTTPException(status_code=404, detail=f"No authentication found for {platform}")
 
 @app.get("/api/platforms")
 async def get_supported_platforms():
