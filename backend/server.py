@@ -1190,6 +1190,60 @@ async def delete_auth(platform: str):
     else:
         raise HTTPException(status_code=404, detail=f"No authentication found for {platform}")
 
+@app.post("/api/cosplay/search")
+async def search_cosplay(request: CosplaySearchRequest):
+    """Search for cosplay galleries across platforms"""
+    try:
+        results = await search_cosplay_galleries(
+            query=request.query,
+            platforms=request.platforms,
+            limit=request.limit
+        )
+        
+        return {
+            "query": request.query,
+            "results": [result.dict() for result in results],
+            "total_found": len(results)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Cosplay search failed: {str(e)}")
+
+@app.post("/api/cosplay/download")
+async def download_cosplay(request: CosplayDownloadRequest):
+    """Download selected cosplay galleries"""
+    try:
+        downloads = await download_cosplay_galleries(
+            result_ids=request.cosplay_results,
+            quality=request.quality
+        )
+        
+        return {
+            "message": f"Started downloading {len(downloads)} cosplay galleries",
+            "downloads": downloads
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Cosplay download failed: {str(e)}")
+
+@app.get("/api/cosplay/suggestions/{query}")
+async def get_cosplay_suggestions(query: str):
+    """Get cosplay name suggestions"""
+    # Popular cosplay characters/series for autocomplete
+    suggestions = [
+        "Dva Overwatch", "Harley Quinn", "Chun Li", "Tifa Lockheart", 
+        "Power Chainsaw Man", "Makima", "Nezuko", "Marin Kitagawa",
+        "Ahri League of Legends", "Jinx Arcane", "Widowmaker", "Mercy",
+        "Hinata Naruto", "Sakura", "Tsunade", "Boa Hancock",
+        "Android 18", "Bulma", "Chi Chi", "Videl",
+        "Rem Re Zero", "Ram", "Emilia", "Aqua Konosuba"
+    ]
+    
+    # Filter suggestions based on query
+    filtered = [s for s in suggestions if query.lower() in s.lower()]
+    
+    return {"suggestions": filtered[:10]}
+
 @app.get("/api/platforms")
 async def get_supported_platforms():
     """Get list of supported platforms"""
