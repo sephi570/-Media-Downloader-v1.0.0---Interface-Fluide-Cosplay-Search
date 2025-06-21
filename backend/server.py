@@ -155,8 +155,16 @@ def detect_platform(url: str) -> str:
 def get_instagram_info(url: str) -> dict:
     """Extract Instagram post/story information"""
     try:
-        # Create temporary Instaloader instance
+        # Create Instaloader instance with authentication if available
         L = instaloader.Instaloader()
+        
+        # Try to login if credentials are available
+        if INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD:
+            try:
+                L.login(INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
+            except Exception as login_error:
+                # Continue without login, but note the limitation
+                logging.warning(f"Instagram login failed: {str(login_error)}")
         
         # Extract shortcode from URL
         if '/p/' in url:
@@ -180,12 +188,18 @@ def get_instagram_info(url: str) -> dict:
             'thumbnail': post.url
         }
     except Exception as e:
+        # If authentication fails, provide helpful error message
+        if "401" in str(e) or "login" in str(e).lower():
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Instagram authentication required. Please configure INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD environment variables. Error: {str(e)}"
+            )
         raise HTTPException(status_code=400, detail=f"Failed to extract Instagram info: {str(e)}")
 
 def get_reddit_info(url: str) -> dict:
     """Extract Reddit post information"""
     try:
-        # Parse Reddit URL to get submission ID
+        # First try the simple JSON approach (no auth required)
         if '/comments/' in url:
             submission_id = url.split('/comments/')[1].split('/')[0]
         else:
@@ -193,7 +207,7 @@ def get_reddit_info(url: str) -> dict:
         
         # Use requests to get Reddit JSON (no auth needed for public posts)
         json_url = f"https://www.reddit.com/comments/{submission_id}.json"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        headers = {'User-Agent': 'Mozilla/5.0 (compatible; gallery-dl-bot/1.0)'}
         
         response = requests.get(json_url, headers=headers)
         response.raise_for_status()
@@ -221,6 +235,12 @@ def get_reddit_info(url: str) -> dict:
             'thumbnail': post_data.get('thumbnail') if post_data.get('thumbnail') != 'self' else None
         }
     except Exception as e:
+        # If we can't get basic info, suggest authentication setup
+        if "403" in str(e) or "429" in str(e):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Reddit access limited. For better access, configure REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET environment variables. Error: {str(e)}"
+            )
         raise HTTPException(status_code=400, detail=f"Failed to extract Reddit info: {str(e)}")
 
 def get_media_info(url: str) -> dict:
