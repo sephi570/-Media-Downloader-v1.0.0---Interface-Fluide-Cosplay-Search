@@ -1,7 +1,11 @@
 {
-  "name": "frontend",
-  "version": "0.1.0",
+  "name": "media-downloader",
+  "version": "1.0.0",
+  "description": "Application de téléchargement de médias multi-plateformes",
+  "author": "Votre Nom",
+  "main": "public/electron.js",
   "private": true,
+  "homepage": "./",
   "dependencies": {
     "axios": "^1.8.4",
     "cra-template": "1.2.0",
@@ -14,7 +18,13 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
+    "build-electron": "npm run build && electron-builder",
+    "dist": "npm run build && electron-builder --publish=never",
+    "pack": "electron-builder --dir",
+    "preelectron-pack": "npm run build"
   },
   "browserslist": {
     "production": [
@@ -31,12 +41,75 @@
   "devDependencies": {
     "@eslint/js": "9.23.0",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^8.2.2",
+    "electron": "^22.0.0",
+    "electron-builder": "^24.9.1",
+    "electron-is-dev": "^2.0.0",
+    "electron-reload": "^2.0.0-alpha.1",
     "eslint": "9.23.0",
     "eslint-plugin-import": "2.31.0",
     "eslint-plugin-jsx-a11y": "6.10.2",
     "eslint-plugin-react": "7.37.4",
     "globals": "15.15.0",
     "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.mediadownloader.app",
+    "productName": "Media Downloader",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "build/**/*",
+      "public/electron.js",
+      "public/preload.js",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!__pycache__/**/*",
+          "!*.pyc"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icon.png",
+      "publisherName": "Media Downloader Inc",
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Media Downloader",
+      "uninstallDisplayName": "Media Downloader",
+      "installerIcon": "public/icon.png",
+      "uninstallerIcon": "public/icon.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "public/icon.png",
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/icon.png",
+      "category": "Utility"
+    }
   }
 }
