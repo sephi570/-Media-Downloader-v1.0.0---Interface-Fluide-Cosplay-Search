@@ -79,3 +79,7 @@ agenthub/agents/youtube/db
 # Mobile development
 android-sdk/ frontend/node_modules/electron/dist/electron
 frontend/node_modules/electron/dist/electron
+frontend/dist/linux-arm64-unpacked/media-downloader
+frontend/dist/linux-arm64-unpacked/resources/app.asar
+frontend/dist/Media
+Downloader-1.0.0-arm64.AppImage
