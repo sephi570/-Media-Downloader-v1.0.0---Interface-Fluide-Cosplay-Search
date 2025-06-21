@@ -768,6 +768,24 @@ async def delete_download(download_id: str):
     
     return {"message": "Download deleted successfully"}
 
+@app.get("/api/auth/status")
+async def get_auth_status():
+    """Get authentication status for different platforms"""
+    return {
+        "instagram": {
+            "configured": bool(INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD),
+            "username": INSTAGRAM_USERNAME if INSTAGRAM_USERNAME else None
+        },
+        "reddit": {
+            "configured": bool(REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET),
+            "has_user_auth": bool(REDDIT_USERNAME and REDDIT_PASSWORD)
+        },
+        "youtube": {
+            "configured": True,
+            "note": "YouTube works without authentication via yt-dlp"
+        }
+    }
+
 @app.get("/api/platforms")
 async def get_supported_platforms():
     """Get list of supported platforms"""
