@@ -349,6 +349,204 @@ async def download_video_task(download_id: str, url: str, quality: str, audio_on
         )
         logging.error(f"Download failed for {download_id}: {str(e)}")
 
+async def download_instagram_task(download_id: str, url: str, quality: str):
+    """Download Instagram media"""
+    try:
+        await db.downloads.update_one(
+            {"id": download_id},
+            {"$set": {"status": "downloading", "progress": 10.0}}
+        )
+        
+        # Get media info
+        media_info = get_instagram_info(url)
+        safe_title = sanitize_filename(media_info['title'])
+        safe_uploader = sanitize_filename(media_info['uploader'])
+        
+        # Create organized folder structure
+        platform_dir = os.path.join(DOWNLOAD_BASE_DIR, "Instagram", safe_uploader)
+        os.makedirs(platform_dir, exist_ok=True)
+        
+        # Use Instaloader to download
+        L = instaloader.Instaloader(
+            dirname_pattern=platform_dir,
+            filename_pattern="{shortcode}_{date_utc}",
+            download_videos=True,
+            download_video_thumbnails=False,
+            download_geotags=False,
+            download_comments=False,
+            save_metadata=False
+        )
+        
+        # Extract shortcode from URL
+        if '/p/' in url:
+            shortcode = url.split('/p/')[1].split('/')[0]
+        elif '/reel/' in url:
+            shortcode = url.split('/reel/')[1].split('/')[0]
+        else:
+            raise ValueError("Unsupported Instagram URL format")
+        
+        # Progress update
+        await db.downloads.update_one(
+            {"id": download_id},
+            {"$set": {"progress": 50.0}}
+        )
+        
+        # Download the post
+        post = instaloader.Post.from_shortcode(L.context, shortcode)
+        L.download_post(post, target="")
+        
+        # Find downloaded files
+        downloaded_files = []
+        for file in os.listdir(platform_dir):
+            if shortcode in file:
+                downloaded_files.append(file)
+        
+        if downloaded_files:
+            # Take the first file (usually the main media)
+            filename = downloaded_files[0]
+            filepath = os.path.join(platform_dir, filename)
+            file_size = os.path.getsize(filepath)
+            
+            await db.downloads.update_one(
+                {"id": download_id},
+                {
+                    "$set": {
+                        "status": "completed",
+                        "progress": 100.0,
+                        "filename": filename,
+                        "file_size": file_size,
+                        "completed_at": datetime.utcnow(),
+                        "title": media_info['title'],
+                        "uploader": media_info['uploader']
+                    }
+                }
+            )
+        else:
+            raise Exception("Downloaded file not found")
+            
+    except Exception as e:
+        await db.downloads.update_one(
+            {"id": download_id},
+            {
+                "$set": {
+                    "status": "failed",
+                    "error_message": str(e)
+                }
+            }
+        )
+        logging.error(f"Instagram download failed for {download_id}: {str(e)}")
+
+async def download_reddit_task(download_id: str, url: str, quality: str):
+    """Download Reddit media using gallery-dl"""
+    try:
+        await db.downloads.update_one(
+            {"id": download_id},
+            {"$set": {"status": "downloading", "progress": 10.0}}
+        )
+        
+        # Get media info
+        media_info = get_reddit_info(url)
+        safe_title = sanitize_filename(media_info['title'])
+        safe_uploader = sanitize_filename(media_info['uploader'])
+        
+        # Create organized folder structure
+        platform_dir = os.path.join(DOWNLOAD_BASE_DIR, "Reddit", safe_uploader)
+        os.makedirs(platform_dir, exist_ok=True)
+        
+        # Progress update
+        await db.downloads.update_one(
+            {"id": download_id},
+            {"$set": {"progress": 30.0}}
+        )
+        
+        # Use gallery-dl to download Reddit content
+        cmd = [
+            "gallery-dl",
+            "--dest", platform_dir,
+            "--filename", "{category}_{subcategory}_{id}_{num}.{extension}",
+            url
+        ]
+        
+        # Run gallery-dl command
+        process = subprocess.run(cmd, capture_output=True, text=True)
+        
+        # Progress update
+        await db.downloads.update_one(
+            {"id": download_id},
+            {"$set": {"progress": 80.0}}
+        )
+        
+        if process.returncode == 0:
+            # Find downloaded files
+            downloaded_files = []
+            for root, dirs, files in os.walk(platform_dir):
+                for file in files:
+                    if file.endswith(('.jpg', '.png', '.gif', '.mp4', '.webm', '.jpeg')):
+                        downloaded_files.append(file)
+                        break  # Take first file found
+            
+            if downloaded_files:
+                filename = downloaded_files[0]
+                filepath = os.path.join(platform_dir, filename)
+                file_size = os.path.getsize(filepath)
+                
+                await db.downloads.update_one(
+                    {"id": download_id},
+                    {
+                        "$set": {
+                            "status": "completed",
+                            "progress": 100.0,
+                            "filename": filename,
+                            "file_size": file_size,
+                            "completed_at": datetime.utcnow(),
+                            "title": media_info['title'],
+                            "uploader": media_info['uploader']
+                        }
+                    }
+                )
+            else:
+                raise Exception("No media files found to download")
+        else:
+            raise Exception(f"gallery-dl failed: {process.stderr}")
+            
+    except Exception as e:
+        await db.downloads.update_one(
+            {"id": download_id},
+            {
+                "$set": {
+                    "status": "failed",
+                    "error_message": str(e)
+                }
+            }
+        )
+        logging.error(f"Reddit download failed for {download_id}: {str(e)}")
+
+async def download_media_task(download_id: str, url: str, quality: str, audio_only: bool, output_format: str, platform: str):
+    """Universal download function that routes to appropriate downloader"""
+    detected_platform = detect_platform(url) if platform == "auto" else platform
+    
+    if detected_platform == 'youtube':
+        await download_video_task(download_id, url, quality, audio_only, output_format)
+    elif detected_platform == 'instagram':
+        await download_instagram_task(download_id, url, quality)
+    elif detected_platform == 'reddit':
+        await download_reddit_task(download_id, url, quality)
+    else:
+        # Try with yt-dlp for other platforms
+        try:
+            await download_video_task(download_id, url, quality, audio_only, output_format)
+        except Exception as e:
+            await db.downloads.update_one(
+                {"id": download_id},
+                {
+                    "$set": {
+                        "status": "failed",
+                        "error_message": f"Unsupported platform '{detected_platform}': {str(e)}"
+                    }
+                }
+            )
+            logging.error(f"Unsupported platform download failed for {download_id}: {str(e)}")
+
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
