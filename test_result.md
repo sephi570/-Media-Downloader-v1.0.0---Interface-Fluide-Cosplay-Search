@@ -281,6 +281,8 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Étendu application en téléchargeur multi-plateformes. Ajouté support Instagram (Instaloader) et Reddit (gallery-dl). Créé système détection automatique plateformes et endpoints universels. Frontend modernisé avec interface adaptative. Besoin test complet nouvelles intégrations."
+  - agent: "testing"
+    message: "Tests backend effectués. Les nouveaux endpoints API universels (/api/media/*) fonctionnent correctement pour l'initiation des téléchargements, mais rencontrent des problèmes d'authentification avec les plateformes externes. YouTube détecte l'utilisation comme un bot (erreur 403), Instagram renvoie une erreur d'authentification (401), et Reddit bloque les requêtes (403). Ces problèmes sont liés aux restrictions des plateformes et non à l'implémentation du code. L'architecture multi-plateforme est correctement implémentée, avec la détection automatique des plateformes et le routage vers les téléchargeurs spécifiques. Les endpoints /api/platforms et /api/stats fonctionnent parfaitement. Pour résoudre ces problèmes d'authentification, il faudrait implémenter des mécanismes d'authentification spécifiques pour chaque plateforme."
 
 backend:
   - task: "YouTube Video Info Extraction"
