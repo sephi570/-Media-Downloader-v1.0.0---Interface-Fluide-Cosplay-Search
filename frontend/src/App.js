@@ -259,6 +259,12 @@ const App = () => {
       case 'reddit': return '🔴';
       case 'pornhub': return '🔞';
       case 'redtube': return '🔞';
+      case 'nhentai': return '📚';
+      case 'luscious': return '💋';
+      case 'nutaku': return '🎮';
+      case 'cosplaytele': return '👘';
+      case 'imhentai': return '📖';
+      case 'spotify': return '🎵';
       default: return '📱';
     }
   };
@@ -270,6 +276,12 @@ const App = () => {
       case 'reddit': return 'Reddit';
       case 'pornhub': return 'PornHub';
       case 'redtube': return 'RedTube';
+      case 'nhentai': return 'NHentai';
+      case 'luscious': return 'Luscious';
+      case 'nutaku': return 'Nutaku';
+      case 'cosplaytele': return 'CosplayTele';
+      case 'imhentai': return 'ImHentai';
+      case 'spotify': return 'Spotify';
       default: return platform || 'Inconnu';
     }
   };
