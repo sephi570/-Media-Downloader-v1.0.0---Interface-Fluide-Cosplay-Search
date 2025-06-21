@@ -64,7 +64,6 @@ class AuthConfig(BaseModel):
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
     additional_data: Optional[dict] = None
-    additional_data: Optional[dict] = None
 
 class MediaInfo(BaseModel):
     title: str
