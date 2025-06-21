@@ -417,10 +417,11 @@ async def download_instagram_task(download_id: str, url: str, quality: str):
             save_metadata=False
         )
         
-        # Try to login if credentials are available
-        if INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD:
+        # Try to login using stored credentials
+        instagram_auth = auth_storage.get("instagram", {})
+        if instagram_auth.get("username") and instagram_auth.get("password"):
             try:
-                L.login(INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
+                L.login(instagram_auth["username"], instagram_auth["password"])
                 logging.info("Instagram login successful")
             except Exception as login_error:
                 logging.warning(f"Instagram login failed: {str(login_error)}")
