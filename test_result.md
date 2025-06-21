@@ -152,15 +152,18 @@ backend:
   
   - task: "Universal Media API Endpoints"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Créé endpoints universels /api/media/* qui routent vers téléchargeurs spécialisés par plateforme"
+      - working: true
+        agent: "testing"
+        comment: "Les endpoints universels /api/media/* sont correctement implémentés et fonctionnent comme prévu. Les tests montrent que /api/media/info, /api/media/download, /api/media/status/{id}, /api/media/downloads et /api/platforms répondent correctement. Le routage vers les téléchargeurs spécifiques à chaque plateforme fonctionne bien, même si les téléchargements échouent en raison des restrictions des plateformes."
   
   - task: "YouTube Video Download with yt-dlp"
     implemented: true
