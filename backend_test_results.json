@@ -5,11 +5,11 @@
   },
   "platform_detection": {
     "status": "Failed",
-    "details": "\u26a0\ufe0f https://youtu.be/jNQXAC9IVRw detection failed due to platform limitations: {\"detail\":\"Failed to extract video info: ERROR: [youtube] jNQXAC9IVRw: Sign in to confirm you\u2019re not a bot. This helps protect our community. Learn more\"}\n\u274c https://www.instagram.com/p/CuM7GMPMnMe/ detection failed: {\"detail\":\"Failed to extract Instagram info: JSON Query to graphql/query: HTTP error code 401.\"}\n\u274c https://www.reddit.com/r/videos/comments/12xqaef/rick_astley_never_gonna_give_you_up_4k_60fps_ai/ detection failed: {\"detail\":\"Failed to extract Reddit info: 403 Client Error: Blocked for url: https://www.reddit.com/comments/12xqaef.json\"}"
+    "details": "\u274c https://youtu.be/jNQXAC9IVRw incorrectly detected as unknown, expected youtube\n\u274c https://www.instagram.com/p/CuM7GMPMnMe/ detection failed: {\"detail\":\"Failed to extract Instagram info: JSON Query to graphql/query: HTTP error code 401.\"}\n\u274c https://www.reddit.com/r/videos/comments/12xqaef/rick_astley_never_gonna_give_you_up_4k_60fps_ai/ detection failed: {\"detail\":\"Failed to extract Reddit info: 403 Client Error: Blocked for url: https://www.reddit.com/comments/12xqaef.json\"}"
   },
   "youtube_info": {
-    "status": "Failed",
-    "details": "YouTube info missing essential data: {'title': 'Me at the zoo', 'duration': 19, 'uploader': 'jawed', 'view_count': 364612107, 'upload_date': '20050424', 'thumbnail': 'https://i.ytimg.com/vi/jNQXAC9IVRw/hqdefault.jpg?sqp=-oaymwEmCOADEOgC8quKqQMa8AEB-AG-AoAC8AGKAgwIABABGFUgWShlMA8=&rs=AOn4CLA9eLBatYv9WbkD4BbZ2Im-biSPTw', 'formats': [{'format_id': '18', 'ext': 'mp4', 'quality': 5.0, 'filesize': 791367, 'format_note': '240p, THROTTLED'}]}"
+    "status": "Warning",
+    "details": "YouTube bot detection triggered. This is a known limitation with yt-dlp in containerized environments."
   },
   "instagram_info": {
     "status": "Failed",
@@ -21,15 +21,15 @@
   },
   "youtube_download": {
     "status": "Passed",
-    "details": "YouTube download started successfully with ID: 3d34d939-f22e-4c20-abd1-a8ed0f956d20"
+    "details": "YouTube download started successfully with ID: 07e85231-0f0b-4ce0-84ea-ee76eb5d150a"
   },
   "instagram_download": {
     "status": "Passed",
-    "details": "Instagram download started successfully with ID: a310a9e3-36b5-42dd-969a-32987a401c9a"
+    "details": "Instagram download started successfully with ID: 3ab21a82-b12b-4eb0-accd-e40038f7fb8a"
   },
   "reddit_download": {
     "status": "Passed",
-    "details": "Reddit download started successfully with ID: 4dfb4bb9-2a2f-4dc1-9dff-caf922ce46e2"
+    "details": "Reddit download started successfully with ID: 72b7559c-2873-41b1-907d-fad6aa066e04"
   },
   "download_status": {
     "status": "Failed",
@@ -37,7 +37,7 @@
   },
   "downloads_list": {
     "status": "Passed",
-    "details": "Downloads list returned 5 items"
+    "details": "Downloads list returned 8 items"
   },
   "platform_filter": {
     "status": "Failed",
@@ -49,6 +49,6 @@
   },
   "stats": {
     "status": "Passed",
-    "details": "Stats endpoint returned all required fields: {'total_downloads': 5, 'completed_downloads': 0, 'failed_downloads': 5, 'currently_downloading': 0, 'success_rate': 0.0}"
+    "details": "Stats endpoint returned all required fields: {'total_downloads': 8, 'completed_downloads': 0, 'failed_downloads': 8, 'currently_downloading': 0, 'success_rate': 0.0}"
   }
 }
