@@ -11,6 +11,13 @@ from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorClient
 import uuid
 import re
+import subprocess
+import tempfile
+import instaloader
+import praw
+from urllib.parse import urlparse
+import requests
+import json
 
 # Environment variables
 import os
