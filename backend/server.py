@@ -123,6 +123,115 @@ def get_video_info(url: str):
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Failed to extract video info: {str(e)}")
 
+def detect_platform(url: str) -> str:
+    """Detect platform from URL"""
+    url_lower = url.lower()
+    
+    if 'youtube.com' in url_lower or 'youtu.be' in url_lower:
+        return 'youtube'
+    elif 'instagram.com' in url_lower:
+        return 'instagram'
+    elif 'reddit.com' in url_lower:
+        return 'reddit'
+    elif 'pornhub.com' in url_lower:
+        return 'pornhub'
+    elif 'redtube.com' in url_lower:
+        return 'redtube'
+    elif 'nhentai.net' in url_lower:
+        return 'nhentai'
+    elif 'luscious.net' in url_lower:
+        return 'luscious'
+    else:
+        return 'unknown'
+
+def get_instagram_info(url: str) -> dict:
+    """Extract Instagram post/story information"""
+    try:
+        # Create temporary Instaloader instance
+        L = instaloader.Instaloader()
+        
+        # Extract shortcode from URL
+        if '/p/' in url:
+            shortcode = url.split('/p/')[1].split('/')[0]
+        elif '/reel/' in url:
+            shortcode = url.split('/reel/')[1].split('/')[0]
+        else:
+            raise ValueError("Unsupported Instagram URL format")
+        
+        # Get post information
+        post = instaloader.Post.from_shortcode(L.context, shortcode)
+        
+        return {
+            'title': post.caption[:100] + '...' if post.caption and len(post.caption) > 100 else post.caption or 'Instagram Post',
+            'platform': 'instagram',
+            'uploader': post.owner_username,
+            'upload_date': post.date_utc.strftime('%Y%m%d'),
+            'media_type': 'video' if post.is_video else 'image',
+            'media_count': 1 if not post.typename == 'GraphSidecar' else len(list(post.get_sidecar_nodes())),
+            'view_count': post.video_view_count if post.is_video else post.likes,
+            'thumbnail': post.url
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to extract Instagram info: {str(e)}")
+
+def get_reddit_info(url: str) -> dict:
+    """Extract Reddit post information"""
+    try:
+        # Parse Reddit URL to get submission ID
+        if '/comments/' in url:
+            submission_id = url.split('/comments/')[1].split('/')[0]
+        else:
+            raise ValueError("Unsupported Reddit URL format")
+        
+        # Use requests to get Reddit JSON (no auth needed for public posts)
+        json_url = f"https://www.reddit.com/comments/{submission_id}.json"
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        
+        response = requests.get(json_url, headers=headers)
+        response.raise_for_status()
+        
+        data = response.json()
+        post_data = data[0]['data']['children'][0]['data']
+        
+        # Determine media type
+        media_type = 'text'
+        if post_data.get('is_video'):
+            media_type = 'video'
+        elif post_data.get('url') and any(ext in post_data['url'].lower() for ext in ['.jpg', '.png', '.gif', '.jpeg']):
+            media_type = 'image'
+        elif 'gallery' in post_data.get('url', ''):
+            media_type = 'gallery'
+        
+        return {
+            'title': post_data.get('title', 'Reddit Post'),
+            'platform': 'reddit',
+            'uploader': f"u/{post_data.get('author', 'unknown')}",
+            'upload_date': datetime.fromtimestamp(post_data.get('created_utc', 0)).strftime('%Y%m%d'),
+            'media_type': media_type,
+            'media_count': 1,
+            'view_count': post_data.get('score', 0),
+            'thumbnail': post_data.get('thumbnail') if post_data.get('thumbnail') != 'self' else None
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to extract Reddit info: {str(e)}")
+
+def get_media_info(url: str) -> dict:
+    """Get media information based on platform"""
+    platform = detect_platform(url)
+    
+    if platform == 'youtube':
+        return get_video_info(url)
+    elif platform == 'instagram':
+        return get_instagram_info(url)
+    elif platform == 'reddit':
+        return get_reddit_info(url)
+    else:
+        # Try with yt-dlp for other platforms
+        try:
+            return get_video_info(url)
+        except:
+            raise HTTPException(status_code=400, detail=f"Unsupported platform or invalid URL: {platform}")
+
 class DownloadProgress:
     def __init__(self, download_id: str):
         self.download_id = download_id
