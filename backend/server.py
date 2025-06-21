@@ -515,20 +515,21 @@ async def download_reddit_task(download_id: str, url: str, quality: str):
         
         # Create gallery-dl config for Reddit authentication if available
         config_data = {}
-        if REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET:
+        reddit_auth = auth_storage.get("reddit", {})
+        if reddit_auth.get("client_id") and reddit_auth.get("client_secret"):
             config_data = {
                 "extractor": {
                     "reddit": {
-                        "client-id": REDDIT_CLIENT_ID,
-                        "client-secret": REDDIT_CLIENT_SECRET
+                        "client-id": reddit_auth["client_id"],
+                        "client-secret": reddit_auth["client_secret"]
                     }
                 }
             }
             
-            if REDDIT_USERNAME and REDDIT_PASSWORD:
+            if reddit_auth.get("username") and reddit_auth.get("password"):
                 config_data["extractor"]["reddit"].update({
-                    "username": REDDIT_USERNAME,
-                    "password": REDDIT_PASSWORD
+                    "username": reddit_auth["username"],
+                    "password": reddit_auth["password"]
                 })
         
         # Use gallery-dl to download Reddit content
