@@ -1,0 +1,56 @@
+name: 🚀 Build Windows EXE
+
+on:
+  workflow_dispatch:  # Permet de lancer manuellement
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-exe:
+    runs-on: windows-latest
+    
+    steps:
+    - name: 📥 Télécharger le code
+      uses: actions/checkout@v4
+      
+    - name: 🟢 Installer Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: 🐍 Installer Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: 📦 Installer les dépendances Frontend
+      run: |
+        cd frontend
+        npm install
+        
+    - name: 📦 Installer les dépendances Backend  
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        
+    - name: ⚛️ Build React
+      run: |
+        cd frontend
+        npm run build
+        
+    - name: 🔨 Créer l'EXE
+      run: |
+        cd frontend
+        npm run dist
+        
+    - name: 📤 Sauvegarder l'EXE
+      uses: actions/upload-artifact@v4
+      with:
+        name: Media-Downloader-Windows-EXE
+        path: frontend/dist/*.exe
+        
+    - name: 📤 Sauvegarder l'Installer
+      uses: actions/upload-artifact@v4
+      with:
+        name: Media-Downloader-Setup
+        path: frontend/dist/*Setup*.exe"
