@@ -477,7 +477,7 @@ async def download_instagram_task(download_id: str, url: str, quality: str):
     except Exception as e:
         error_msg = str(e)
         if "401" in error_msg or "login" in error_msg.lower():
-            error_msg = f"Instagram authentication required. Please configure INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD environment variables. {error_msg}"
+            error_msg = f"Instagram authentication required. Please configure your Instagram credentials in the Settings panel. {error_msg}"
         
         await db.downloads.update_one(
             {"id": download_id},
