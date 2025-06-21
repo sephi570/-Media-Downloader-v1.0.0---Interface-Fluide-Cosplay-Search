@@ -552,19 +552,22 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "message": "YouTube Downloader API is running"}
 
-@app.post("/api/video/info")
-async def get_video_information(request: DownloadRequest):
-    """Get video information without downloading"""
-    return get_video_info(request.url)
+@app.post("/api/media/info")
+async def get_media_information(request: DownloadRequest):
+    """Get media information from any supported platform"""
+    return get_media_info(request.url)
 
-@app.post("/api/video/download")
-async def start_download(request: DownloadRequest, background_tasks: BackgroundTasks):
-    """Start video download process"""
+@app.post("/api/media/download")
+async def start_media_download(request: DownloadRequest, background_tasks: BackgroundTasks):
+    """Start media download process for any supported platform"""
     download_id = str(uuid.uuid4())
     
-    # Validate URL
-    if not request.url or 'youtube.com' not in request.url and 'youtu.be' not in request.url:
-        raise HTTPException(status_code=400, detail="Please provide a valid YouTube URL")
+    # Detect platform
+    platform = detect_platform(request.url) if request.platform == "auto" else request.platform
+    
+    # Validate URL based on platform
+    if platform == 'unknown':
+        raise HTTPException(status_code=400, detail="Unsupported platform or invalid URL")
     
     # Create download record
     download_record = {
@@ -575,22 +578,24 @@ async def start_download(request: DownloadRequest, background_tasks: BackgroundT
         "created_at": datetime.utcnow(),
         "quality": request.quality,
         "audio_only": request.audio_only,
-        "output_format": request.output_format
+        "output_format": request.output_format,
+        "platform": platform
     }
     
     await db.downloads.insert_one(download_record)
     
-    # Start background download
+    # Start background download with new universal function
     background_tasks.add_task(
-        download_video_task,
+        download_media_task,
         download_id,
         request.url,
         request.quality,
         request.audio_only,
-        request.output_format
+        request.output_format,
+        request.platform
     )
     
-    return {"download_id": download_id, "status": "started"}
+    return {"download_id": download_id, "status": "started", "platform": platform}
 
 @app.get("/api/video/status/{download_id}")
 async def get_download_status(download_id: str):
