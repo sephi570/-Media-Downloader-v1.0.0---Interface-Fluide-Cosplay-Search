@@ -634,6 +634,15 @@ async def download_media_task(download_id: str, url: str, quality: str, audio_on
         await download_instagram_task(download_id, url, quality)
     elif detected_platform == 'reddit':
         await download_reddit_task(download_id, url, quality)
+    elif detected_platform in ['pornhub', 'redtube']:
+        # Use yt-dlp for adult video sites
+        await download_video_task(download_id, url, quality, audio_only, output_format)
+    elif detected_platform in ['nhentai', 'luscious', 'nutaku', 'cosplaytele', 'imhentai']:
+        # Use gallery-dl for gallery sites
+        await download_gallery_site_task(download_id, url, quality, detected_platform)
+    elif detected_platform == 'spotify':
+        # Spotify handling
+        await download_spotify_task(download_id, url, quality)
     else:
         # Try with yt-dlp for other platforms
         try:
@@ -649,6 +658,117 @@ async def download_media_task(download_id: str, url: str, quality: str, audio_on
                 }
             )
             logging.error(f"Unsupported platform download failed for {download_id}: {str(e)}")
+
+async def download_gallery_site_task(download_id: str, url: str, quality: str, platform: str):
+    """Download from gallery sites using gallery-dl"""
+    try:
+        await db.downloads.update_one(
+            {"id": download_id},
+            {"$set": {"status": "downloading", "progress": 10.0}}
+        )
+        
+        # Create organized folder structure
+        platform_dir = os.path.join(DOWNLOAD_BASE_DIR, platform.title())
+        os.makedirs(platform_dir, exist_ok=True)
+        
+        # Progress update
+        await db.downloads.update_one(
+            {"id": download_id},
+            {"$set": {"progress": 30.0}}
+        )
+        
+        # Use gallery-dl to download content
+        cmd = [
+            "gallery-dl",
+            "--dest", platform_dir,
+            "--filename", f"{platform}_" + "{category}_{title}_{num}.{extension}",
+            url
+        ]
+        
+        # Run gallery-dl command
+        process = subprocess.run(cmd, capture_output=True, text=True)
+        
+        # Progress update
+        await db.downloads.update_one(
+            {"id": download_id},
+            {"$set": {"progress": 80.0}}
+        )
+        
+        if process.returncode == 0:
+            # Find downloaded files
+            downloaded_files = []
+            for root, dirs, files in os.walk(platform_dir):
+                for file in files:
+                    if file.endswith(('.jpg', '.png', '.gif', '.mp4', '.webm', '.jpeg', '.zip')):
+                        downloaded_files.append(file)
+                        break
+            
+            if downloaded_files:
+                filename = downloaded_files[0]
+                filepath = os.path.join(platform_dir, filename)
+                file_size = os.path.getsize(filepath)
+                
+                await db.downloads.update_one(
+                    {"id": download_id},
+                    {
+                        "$set": {
+                            "status": "completed",
+                            "progress": 100.0,
+                            "filename": filename,
+                            "file_size": file_size,
+                            "completed_at": datetime.utcnow(),
+                            "title": f"{platform.title()} Gallery",
+                            "uploader": platform.title()
+                        }
+                    }
+                )
+            else:
+                raise Exception("No files found to download")
+        else:
+            raise Exception(f"gallery-dl failed: {process.stderr}")
+            
+    except Exception as e:
+        await db.downloads.update_one(
+            {"id": download_id},
+            {
+                "$set": {
+                    "status": "failed",
+                    "error_message": str(e)
+                }
+            }
+        )
+        logging.error(f"{platform} download failed for {download_id}: {str(e)}")
+
+async def download_spotify_task(download_id: str, url: str, quality: str):
+    """Handle Spotify downloads (limited to previews due to DRM)"""
+    try:
+        await db.downloads.update_one(
+            {"id": download_id},
+            {"$set": {"status": "downloading", "progress": 10.0}}
+        )
+        
+        # Note: Spotify has DRM protection, only previews can be downloaded
+        await db.downloads.update_one(
+            {"id": download_id},
+            {
+                "$set": {
+                    "status": "failed",
+                    "error_message": "Spotify downloads are not supported due to DRM protection. Only preview clips (30 seconds) are available without subscription."
+                }
+            }
+        )
+        
+    except Exception as e:
+        await db.downloads.update_one(
+            {"id": download_id},
+            {
+                "$set": {
+                    "status": "failed",
+                    "error_message": str(e)
+                }
+            }
+        )
+        logging.error(f"Spotify download failed for {download_id}: {str(e)}")
 
 @app.get("/api/health")
 async def health_check():
