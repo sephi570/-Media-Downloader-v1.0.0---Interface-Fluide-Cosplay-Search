@@ -57,7 +57,13 @@ class DownloadRequest(BaseModel):
     output_format: str = "mp4"
     platform: str = "auto"  # auto, youtube, instagram, reddit
 
-class MediaInfo(BaseModel):
+class AuthConfig(BaseModel):
+    platform: str
+    username: Optional[str] = None
+    password: Optional[str] = None
+    client_id: Optional[str] = None
+    client_secret: Optional[str] = None
+    additional_data: Optional[dict] = None
     title: str
     platform: str
     uploader: Optional[str] = None
