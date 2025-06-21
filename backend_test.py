@@ -13,7 +13,8 @@ with open('/app/frontend/.env', 'r') as f:
             break
 
 # Test YouTube URL (short video)
-TEST_VIDEO_URL = "https://youtu.be/jNQXAC9IVRw"
+# Using a different URL as the original one is triggering bot detection
+TEST_VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"  # Rick Astley - Never Gonna Give You Up
 
 # Test class for YouTube Downloader API
 class YouTubeDownloaderTest:
