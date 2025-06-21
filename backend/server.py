@@ -597,7 +597,7 @@ async def start_media_download(request: DownloadRequest, background_tasks: Backg
     
     return {"download_id": download_id, "status": "started", "platform": platform}
 
-@app.get("/api/video/status/{download_id}")
+@app.get("/api/media/status/{download_id}")
 async def get_download_status(download_id: str):
     """Get download status and progress"""
     download = await db.downloads.find_one({"id": download_id})
@@ -606,21 +606,23 @@ async def get_download_status(download_id: str):
     
     return DownloadStatus(**download)
 
-@app.get("/api/video/downloads")
-async def list_downloads(limit: int = 50, status: Optional[str] = None):
-    """List all downloads with optional status filter"""
+@app.get("/api/media/downloads")
+async def list_downloads(limit: int = 50, status: Optional[str] = None, platform: Optional[str] = None):
+    """List all downloads with optional status and platform filter"""
     query = {}
     if status:
         query["status"] = status
+    if platform:
+        query["platform"] = platform
     
     cursor = db.downloads.find(query).sort("created_at", -1).limit(limit)
     downloads = await cursor.to_list(length=limit)
     
     return [DownloadStatus(**download) for download in downloads]
 
-@app.get("/api/video/download/{download_id}")
+@app.get("/api/media/download/{download_id}")
 async def download_file(download_id: str):
-    """Download the completed video file"""
+    """Download the completed media file"""
     download = await db.downloads.find_one({"id": download_id})
     if not download:
         raise HTTPException(status_code=404, detail="Download not found")
@@ -628,12 +630,22 @@ async def download_file(download_id: str):
     if download["status"] != "completed":
         raise HTTPException(status_code=400, detail="Download not completed")
     
-    # Find the file
+    # Find the file based on platform
     if not download.get("filename") or not download.get("uploader"):
         raise HTTPException(status_code=404, detail="File information not found")
     
-    uploader_dir = os.path.join(DOWNLOAD_BASE_DIR, sanitize_filename(download["uploader"]))
-    filepath = os.path.join(uploader_dir, download["filename"])
+    platform = download.get("platform", "unknown")
+    
+    if platform == "youtube":
+        platform_dir = os.path.join(DOWNLOAD_BASE_DIR, sanitize_filename(download["uploader"]))
+    elif platform == "instagram":
+        platform_dir = os.path.join(DOWNLOAD_BASE_DIR, "Instagram", sanitize_filename(download["uploader"]))
+    elif platform == "reddit":
+        platform_dir = os.path.join(DOWNLOAD_BASE_DIR, "Reddit", sanitize_filename(download["uploader"]))
+    else:
+        platform_dir = os.path.join(DOWNLOAD_BASE_DIR, "Other", sanitize_filename(download["uploader"]))
+    
+    filepath = os.path.join(platform_dir, download["filename"])
     
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="File not found on disk")
@@ -644,7 +656,7 @@ async def download_file(download_id: str):
         filename=download["filename"]
     )
 
-@app.delete("/api/video/download/{download_id}")
+@app.delete("/api/media/download/{download_id}")
 async def delete_download(download_id: str):
     """Delete download record and file"""
     download = await db.downloads.find_one({"id": download_id})
@@ -653,8 +665,18 @@ async def delete_download(download_id: str):
     
     # Delete file if exists
     if download.get("filename") and download.get("uploader"):
-        uploader_dir = os.path.join(DOWNLOAD_BASE_DIR, sanitize_filename(download["uploader"]))
-        filepath = os.path.join(uploader_dir, download["filename"])
+        platform = download.get("platform", "unknown")
+        
+        if platform == "youtube":
+            platform_dir = os.path.join(DOWNLOAD_BASE_DIR, sanitize_filename(download["uploader"]))
+        elif platform == "instagram":
+            platform_dir = os.path.join(DOWNLOAD_BASE_DIR, "Instagram", sanitize_filename(download["uploader"]))
+        elif platform == "reddit":
+            platform_dir = os.path.join(DOWNLOAD_BASE_DIR, "Reddit", sanitize_filename(download["uploader"]))
+        else:
+            platform_dir = os.path.join(DOWNLOAD_BASE_DIR, "Other", sanitize_filename(download["uploader"]))
+        
+        filepath = os.path.join(platform_dir, download["filename"])
         
         if os.path.exists(filepath):
             try:
@@ -666,6 +688,18 @@ async def delete_download(download_id: str):
     await db.downloads.delete_one({"id": download_id})
     
     return {"message": "Download deleted successfully"}
+
+@app.get("/api/platforms")
+async def get_supported_platforms():
+    """Get list of supported platforms"""
+    return {
+        "supported_platforms": [
+            {"name": "YouTube", "key": "youtube", "formats": ["mp4", "avi", "mkv", "webm", "mp3"]},
+            {"name": "Instagram", "key": "instagram", "formats": ["jpg", "mp4"]},
+            {"name": "Reddit", "key": "reddit", "formats": ["jpg", "png", "gif", "mp4", "webm"]},
+            {"name": "Other (via yt-dlp)", "key": "other", "formats": ["mp4", "avi", "mkv", "webm", "mp3"]}
+        ]
+    }
 
 @app.get("/api/stats")
 async def get_stats():
