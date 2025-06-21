@@ -38,6 +38,12 @@ const App = () => {
     if (urlLower.includes('reddit.com')) return 'reddit';
     if (urlLower.includes('pornhub.com')) return 'pornhub';
     if (urlLower.includes('redtube.com')) return 'redtube';
+    if (urlLower.includes('nhentai.net')) return 'nhentai';
+    if (urlLower.includes('luscious.net')) return 'luscious';
+    if (urlLower.includes('nutaku.net')) return 'nutaku';
+    if (urlLower.includes('cosplaytele')) return 'cosplaytele';
+    if (urlLower.includes('imhentai.xxx')) return 'imhentai';
+    if (urlLower.includes('spotify.com') || urlLower.includes('open.spotify.com')) return 'spotify';
     return 'unknown';
   };
 
